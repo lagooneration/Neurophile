@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NeuroAuRA-specific
+# -------------------
+# EEG data files (never commit raw data)
+data/
+*.eeg
+*.vhdr
+*.vmrk
+*.edf
+*.bdf
+*.xdf
+*.h5
+*.hdf5
+
+# Stimulus audio (large binary files; use DataLad or Git LFS)
+stimuli/audio/
+stimuli/cache/
+
+# Results
+results/
+derivatives/
+
+# Trained model weights
+*.pt
+*.pth
+*.pkl
+*.joblib
+
+# Logs
+*.log
+logs/
+
+# Others
+HELP.md

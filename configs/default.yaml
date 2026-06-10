@@ -1,0 +1,79 @@
+# NeuroAuRA Default Configuration
+# =================================
+# This file defines system-wide defaults. Override per-experiment by
+# creating a config file and passing --config /path/to/config.yaml
+
+neuroaura:
+  version: "2025.06.0"
+
+# ── EEG Recording ─────────────────────────────────────────────────────────────
+eeg:
+  # Default device. Override with: --device cyton
+  device: "cyton"             # cyton | ganglion | cyton_daisy | lsl_generic
+  port: "COM3"                # serial port (Cyton) or LSL stream name (generic)
+  lsl_stream_name: "OpenBCI_EEG"
+
+  sampling_rate: 250          # Hz (device-native; pipeline may resample)
+
+# ── Synchronization ───────────────────────────────────────────────────────────
+sync:
+  tier: 2                     # 1=TTL, 2=LSL, 3=software
+  lsl_stream_name_markers: "AudioMarkers"
+  lsl_stream_name_envelope: "AudioEnvelope"
+  # Tier 3 calibration chirp settings
+  chirp_enabled: true
+  chirp_interval_minutes: 5
+
+# ── Preprocessing ─────────────────────────────────────────────────────────────
+preprocessing:
+  bandpass_low: 0.5           # Hz
+  bandpass_high: 45.0         # Hz
+  notch_hz: 50.0              # 50 (EU/India/Asia) or 60 (North America)
+  notch_harmonics: true
+  rereference: "average"
+  bad_channel_method: "correlation"   # correlation | null
+  resample_hz: null           # null = keep device sampling rate
+  amplitude_threshold_uv: 150.0
+
+  # Cochlear Implant artifact pipeline
+  ci_artifact:
+    enabled: false            # set true for CI subjects
+    stage1:
+      enabled: true
+      pulse_detection_highpass_hz: 100.0
+      pulse_detection_threshold_std: 3.0
+      template_tau_pulses: 50
+      epoch_pre_ms: 0.5
+      epoch_post_ms: 2.0
+    stage2_enabled: false     # spatial filter — contribute!
+    stage3_enabled: false     # adaptive filter — contribute!
+
+# ── Stimulus ──────────────────────────────────────────────────────────────────
+stimulus:
+  manifest_path: "stimuli/manifest.yaml"
+  # Envelope extraction settings
+  envelope:
+    n_bands: 16
+    f_low: 100.0              # Hz (filterbank lower edge)
+    f_high: 8000.0            # Hz (filterbank upper edge)
+    compress: true            # power-law compression (exponent 0.3)
+
+# ── Decoding ──────────────────────────────────────────────────────────────────
+decoding:
+  decoder: "linear"           # linear | cnn (cnn requires neuroaura[dl])
+  window_s:                   # decision window sizes to evaluate
+    - 10
+    - 30
+    - 60
+  linear:
+    lag_min_ms: 0.0
+    lag_max_ms: 250.0
+    alphas: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
+
+# ── Output ────────────────────────────────────────────────────────────────────
+output:
+  bids_root: "./data"
+  derivatives_dir: "./data/derivatives/neuroaura"
+  save_cleaned_eeg: true
+  save_envelopes: true
+  report_format: "html"       # html | pdf | none

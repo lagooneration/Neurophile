@@ -1,0 +1,59 @@
+# NeuroAuRA — Cochlear Implant Rehabilitation Preset
+# ====================================================
+# Inherits from default.yaml. Only overrides are listed here.
+#
+# Usage:
+#   neuroaura decode /data/my_study --config configs/ci_rehab.yaml --subject 01 --session 01
+#   neuroaura validate /data/my_study --config configs/ci_rehab.yaml
+
+_base: "configs/default.yaml"
+
+eeg:
+  sampling_rate: 1000         # Higher rate recommended for CI artifact detection
+                              # (need to resolve pulses at 900+ pps)
+
+preprocessing:
+  bandpass_low: 0.5
+  bandpass_high: 30.0         # Lower HP for CI — artifact-heavy above 30 Hz
+  resample_hz: 512            # Resample after CI artifact removal to reduce memory
+
+  ci_artifact:
+    enabled: true             # ← This is the key difference from default
+    stage1:
+      enabled: true
+      pulse_detection_highpass_hz: 100.0
+      pulse_detection_threshold_std: 2.5  # Lower threshold for bilateral CIs
+      template_tau_pulses: 100            # More smoothing for high stimulation rates
+      epoch_pre_ms: 0.5
+      epoch_post_ms: 3.0                  # Longer post-epoch for slower CI responses
+    stage2_enabled: false     # Set true when spatial_filter.py is implemented
+    stage3_enabled: false
+
+decoding:
+  # CI patients often need longer windows due to degraded cortical tracking
+  window_s:
+    - 30
+    - 60
+    - 120
+
+  linear:
+    lag_min_ms: 0.0
+    lag_max_ms: 350.0         # Extend lag range: CI delays cortical response onset
+
+# ── CI-Specific Session Metadata Template ─────────────────────────────────────
+# These fields MUST be present in the session sidecar JSON for CI subjects.
+# Fill in for each subject before recording.
+ci_subject_metadata_template:
+  CochlearImplant:
+    side: null                # "left" | "right" | "bilateral"
+    model: null               # e.g. "CI632", "Nucleus Profile Plus"
+    manufacturer: null        # e.g. "Cochlear", "MED-EL", "Advanced Bionics"
+    strategy: null            # e.g. "ACE", "HDCIS", "FS4"
+    n_maxima: null            # number of spectral maxima selected (ACE: typically 8)
+    rate_pps: null            # stimulation rate in pulses per second (e.g. 900)
+    implant_date: null        # ISO date "YYYY-MM-DD"
+    experience_months: null   # months since activation
+
+output:
+  save_cleaned_eeg: true
+  report_format: "html"
