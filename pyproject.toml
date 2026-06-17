@@ -50,6 +50,7 @@ dependencies = [
     "pooch>=1.8",        # dataset download + checksum verification
     "pybv>=0.7",         # BrainVision format write
     "edfio>=0.4",        # EDF+ format read/write
+    "soundfile>=0.12",   # audio file I/O (WAV, FLAC) for envelope extraction
 ]
 
 [project.optional-dependencies]
@@ -70,7 +71,7 @@ federated = ["flwr>=1.7"]
 viz = ["plotly>=5.18", "dash>=2.15"]
 
 # Deep learning decoders
-dl = ["torch>=2.2"]
+dl = ["torch>=2.2", "tqdm>=4.66"]
 
 # Device drivers
 openbci = ["brainflow>=5.12"]  # covers OpenBCI Cyton + Ganglion

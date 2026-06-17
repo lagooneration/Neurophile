@@ -2,11 +2,22 @@
 
 **Neuro-Auditory Rehabilitation & Attention Platform**
 
-An open-source EEG software ecosystem for auditory attention decoding, cochlear implant rehabilitation, and real-time neuroplasticity tracking.
+An open-source EEG software ecosystem for auditory attention decoding, cochlear implant rehabilitation, and real-time neuroplasticity tracking — now with a unified deep-learning model ecosystem bridging multiple research labs.
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
+---
+
+## Who Is This For?
+
+NeuroAuRA has two distinct user groups with different entry points:
+
+| I am a… | I want to… | Go to… |
+|---|---|---|
+| **Clinician / Audiologist** | Use the pre-trained model to decode CI patient attention | [CLINICAL_GUIDE.md](CLINICAL_GUIDE.md) |
+| **Researcher / Engineer** | Train, extend, or contribute to the model ecosystem | [CONTRIBUTORS.md](CONTRIBUTORS.md) |
 
 ---
 
@@ -23,6 +34,28 @@ NeuroAuRA is **not** a general-purpose BCI framework. It is a domain-specific pl
 
 ## Quick Start
 
+### For Clinicians (Pre-trained Model)
+```bash
+pip install neuroaura[dl]
+
+# TODO: hosted checkpoint not yet published — see CLINICAL_GUIDE.md for status
+python scripts/download_global_model.py       # downloads the Global CI Foundation Model
+python scripts/run_inference.py \
+    --eeg patient_session.fif \
+    --audio speaker1.wav speaker2.wav
+```
+> See [CLINICAL_GUIDE.md](CLINICAL_GUIDE.md) for the full step-by-step guide.
+
+### For Researchers (Train from Scratch)
+```bash
+pip install -e ".[dev,dl]"
+bash data_pipeline/fetchers/clone_author_repos.sh
+python data_pipeline/fetchers/fetch_kul_dataset.py
+python scripts/train_global_ci_model.py --synthetic --epochs 5  # smoke test
+```
+> See [CONTRIBUTORS.md](CONTRIBUTORS.md) for the full training guide.
+
+### Legacy CLI (Classical Linear Decoder)
 ```bash
 pip install neuroaura
 
@@ -38,6 +71,72 @@ neuroaura decode --config configs/ci_rehab.yaml --dataset /path/to/bids/
 
 ---
 
+## Architecture Overview
+
+```
+neuroaura/
+├── data/           Data standards: BIDS-EEG + HDF5 streaming
+├── sync/           Temporal sync: TTL (Tier 1), LSL (Tier 2), Software (Tier 3)
+├── stimulus/       Envelope extraction + CI vocoder simulation  [UPDATED]
+├── devices/        EEG device drivers (LSL-based)
+├── preprocessing/  Standard pipeline + 3-stage CI artifact rejection [UPDATED]
+├── decoding/       AAD decoders + parallel evaluation harness
+├── models/         Deep-learning AAD models + Adapter ecosystem  [NEW]
+│   ├── core/       BaseAADModel — PyTorch contract for all DL models
+│   ├── adapters/   KULAdapter, MesgaraniAdapter (with fallback networks)
+│   └── global_trainer.py  Strategy-Pattern training orchestrator
+├── federated/      Federated learning: edge training + server aggregation
+├── visualization/  Real-time dashboard + session reports
+└── cli/            `neuroaura` command-line interface
+```
+
+Data pipeline scripts (not part of the Python package):
+```
+data_pipeline/
+├── fetchers/
+│   ├── fetch_kul_dataset.py        Download KU Leuven EEG dataset (Zenodo)
+│   ├── fetch_openneuro_bids.py     Download OpenNeuro BIDS datasets
+│   └── clone_author_repos.sh       Clone KUL CNN + Mesgarani repos
+└── eeg_preprocessing/
+    └── standardize_montage.py      Remap EEG channels → standard 64-ch 10-20
+```
+
+---
+
+## What Was Recently Added (v2025.06)
+
+### New: Deep Learning Model Ecosystem (`neuroaura.models`)
+A new `models` package introduces PyTorch-native AAD models alongside the existing sklearn-based `LinearDecoder`. The architecture uses the **Adapter Pattern** to standardize diverse academic AAD models under a single interface.
+
+```python
+from neuroaura.models import KULAdapter, GlobalCITrainer
+
+model = KULAdapter(num_eeg_channels=64)          # fallback TCN — no external deps
+trainer = GlobalCITrainer(model, epochs=50)
+trainer.train(clean_eeg, ci_envelope, labels)    # outputs .pt checkpoint
+```
+
+### New: CI Vocoder (`neuroaura.stimulus.CIVocoderSimulator`)
+Converts normal-hearing audio into a mathematical simulation of what a Cochlear Implant user hears — N frequency bands, Hilbert amplitude modulation, noise/sine carriers. Used to train models that are biologically primed for CI acoustics.
+
+```python
+from neuroaura.stimulus import CIVocoderSimulator
+vocoder = CIVocoderSimulator(fs=44100, n_channels=16)
+ci_audio, ci_envelope = vocoder.simulate_and_extract_envelope(audio, fs_eeg=64)
+```
+
+### Updated: CI Artifact Pipeline — Stage 3 Now Implemented
+Stage 3 of the CI artifact pipeline (previously a no-op stub) is now a full **ICA-based cancellation** module. FastICA automatically identifies and removes CI electrical artifact components using kurtosis + periodicity criteria.
+
+```python
+from neuroaura.preprocessing.ci_artifact.pipeline import CIArtifactPipeline, CIArtifactConfig
+
+pipeline = CIArtifactPipeline(fs=1000, config=CIArtifactConfig(stage3_enabled=True))
+clean_eeg = pipeline.run(raw_eeg)
+```
+
+---
+
 ## Supported Devices
 
 | Device | Status | Driver | Channels | Notes |
@@ -49,25 +148,6 @@ neuroaura decode --config configs/ci_rehab.yaml --dataset /path/to/bids/
 | g.tec g.USBamp | 🔧 Scaffold | `pygds` | 16/32 | CI-lab gold standard |
 | Emotiv EPOC X | 🔧 Scaffold | `cortex` | 14 | Consumer, proprietary SDK |
 | Any LSL-compatible | ✅ Generic | `pylsl` | any | Use `neuroaura.devices.lsl_generic` |
-
----
-
-## Architecture Overview
-
-```
-neuroaura/
-├── data/           Data standards: BIDS-EEG + HDF5 streaming
-├── sync/           Temporal sync: TTL (Tier 1), LSL (Tier 2), Software (Tier 3)
-├── stimulus/       Stimulus delivery: envelope extraction, paradigm scripting
-├── devices/        EEG device drivers (LSL-based)
-├── preprocessing/  Signal processing: standard pipeline + CI artifact rejection
-├── decoding/       AAD decoders + parallel evaluation harness
-├── federated/      Federated learning: edge training + server aggregation
-├── visualization/  Real-time dashboard + session reports
-└── cli/            `neuroaura` command-line interface
-```
-
-See [docs/architecture.md](docs/architecture.md) for the full specification.
 
 ---
 
@@ -91,7 +171,19 @@ Cochlear implant EEG artifacts are **not** removable with standard ICA/ASR. Neur
 |-------|--------|--------|
 | 1 | Template subtraction (periodic artifact) | ✅ Implemented |
 | 2 | Spatial filtering (CCA / LCMV / SSD) | 🔧 Scaffold — see [CONTRIBUTING.md](CONTRIBUTING.md) |
-| 3 | Adaptive filtering (LMS / RLS) | 🔧 Scaffold — see [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 3 | ICA-based cancellation (kurtosis + periodicity) | ✅ Implemented |
+
+---
+
+## AAD Models
+
+| Model | Architecture | Interface | Status | Reference |
+|-------|---|---|---|---|
+| Linear stimulus reconstruction | Ridge regression | sklearn `fit/predict` | ✅ Implemented | Crosse et al. (2016) |
+| KULAdapter | 3-layer TCN (fallback) / KUL CNN (external) | PyTorch `nn.Module` | ✅ Fallback ready | Vandecappelle et al. (2021) |
+| MesgaraniAdapter | Conv+GRU (fallback) / CRN (external) | PyTorch `nn.Module` | ✅ Fallback ready | Mesgarani & Chang (2012) |
+| ZionGolumbic cross-attention | Transformer cross-attention | PyTorch `nn.Module` | 🔧 TODO | Zion-Golumbic et al. (2013) |
+| Global CI Foundation Model | KULAdapter trained on CI-vocoded data | PyTorch checkpoint | 🔧 TODO: checkpoint not yet published | — |
 
 ---
 
@@ -100,7 +192,7 @@ Cochlear implant EEG artifacts are **not** removable with standard ICA/ASR. Neur
 | Decoder | Type | Status | Reference |
 |---------|------|--------|-----------|
 | Linear stimulus reconstruction | Ridge regression | ✅ Implemented | Crosse et al. (2016) |
-| CNN-based AAD | Deep learning | 🔧 Scaffold | Vandecappelle et al. (2021) |
+| CNN-based AAD | Deep learning | ✅ Via KULAdapter | Vandecappelle et al. (2021) |
 | Subject-independent AAD | Transfer learning | 🔧 Scaffold | Ciccarelli et al. (2023) |
 
 ---
@@ -113,12 +205,16 @@ All audio stimuli bundled with NeuroAuRA are CC-licensed. See [stimuli/manifest.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). The highest-value open contributions are:
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CONTRIBUTORS.md](CONTRIBUTORS.md). The highest-value open contributions are:
 
-1. **CI artifact Stage 2 & 3** (`src/neuroaura/preprocessing/ci_artifact/`)
-2. **New EEG device drivers** (`src/neuroaura/devices/`)
-3. **AAD decoder implementations** (`src/neuroaura/decoding/`)
-4. **Real-time LSL pipeline** (`src/neuroaura/sync/`)
+1. **Global CI Foundation Model checkpoint** — Train and publish the `.pt` file to Hugging Face Hub / Zenodo
+2. **`scripts/run_inference.py`** — Clinical inference script (TODO)
+3. **`scripts/download_global_model.py`** — Checkpoint downloader (TODO)
+4. **Wire real KUL / Mesgarani models** — Fill TODO markers in adapter shims
+5. **CI artifact Stage 2** (`spatial_filter.py`) — Spatial filtering contribution
+6. **New EEG device drivers** (`src/neuroaura/devices/`)
+7. **ZionGolumbic cross-attention adapter** (`src/neuroaura/models/adapters/`)
+8. **Federated Learning client** — Flower `NumPyClient` wrapper for edge devices
 
 ---
 

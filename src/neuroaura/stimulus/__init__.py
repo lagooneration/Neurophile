@@ -1,20 +1,26 @@
 """
 neuroaura.stimulus
 ==================
-Stimulus delivery, envelope extraction, and paradigm scripting.
+Stimulus delivery, envelope extraction, CI vocoding, and paradigm scripting.
 
 Implemented
 -----------
-StimulusManifest    : CC-licensed audio registry with SHA-256 checksums
 EnvelopeExtractor   : Gammatone filterbank → Hilbert envelope
+CIVocoderSimulator  : Shannon (1995) N-channel acoustic vocoder for CI simulation
 
 Scaffold (see CONTRIBUTING.md)
 ------------------------------
-StimulusEngine      : Low-latency audio playback (PortAudio/sounddevice) — engine.py
-ParadigmRunner      : YAML paradigm file parser and trial runner — paradigm.py
+StimulusManifest    : CC-licensed audio registry — manifest.py (contribute!)
+StimulusEngine      : Low-latency audio playback — engine.py (contribute!)
+ParadigmRunner      : YAML paradigm file parser — paradigm.py (contribute!)
 """
 
-from neuroaura.stimulus.manifest import StimulusManifest
 from neuroaura.stimulus.envelope import EnvelopeExtractor
+from neuroaura.stimulus.ci_vocoder import CIVocoderSimulator
 
-__all__ = ["StimulusManifest", "EnvelopeExtractor"]
+# StimulusManifest is scaffolded but not yet implemented — guard import
+try:
+    from neuroaura.stimulus.manifest import StimulusManifest
+    __all__ = ["StimulusManifest", "EnvelopeExtractor", "CIVocoderSimulator"]
+except ImportError:
+    __all__ = ["EnvelopeExtractor", "CIVocoderSimulator"]

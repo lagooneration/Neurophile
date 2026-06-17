@@ -3,6 +3,10 @@ neuroaura.preprocessing.ci_artifact.pipeline
 =============================================
 Orchestrator for the three-stage CI artifact rejection pipeline.
 
+Stage 1 — Template Subtraction  : Removes the average CI pulse shape.
+Stage 2 — Spatial Filter        : Projects out dominant artifact topography.
+Stage 3 — ICA Cancellation      : FastICA + kurtosis/periodicity detection.
+
 Runs whichever stages are enabled in the config. Disabled stages pass
 the signal through unchanged, allowing partial pipelines during development.
 """
@@ -10,13 +14,17 @@ the signal through unchanged, allowing partial pipelines during development.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from neuroaura.preprocessing.ci_artifact.template_subtraction import (
     CITemplateSubtraction,
     TemplateSubtractionConfig,
+)
+from neuroaura.preprocessing.ci_artifact.ica_cancellation import (
+    ICACancellation,
+    ICACancellationConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,11 +36,14 @@ class CIArtifactConfig:
 
     stage1: TemplateSubtractionConfig = None  # type: ignore[assignment]
     stage2_enabled: bool = False  # set True once spatial_filter.py is implemented
-    stage3_enabled: bool = False  # set True once adaptive_filter.py is implemented
+    stage3_enabled: bool = False  # set True to enable ICA cancellation
+    stage3: ICACancellationConfig = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         if self.stage1 is None:
             self.stage1 = TemplateSubtractionConfig()
+        if self.stage3 is None:
+            self.stage3 = ICACancellationConfig()
 
 
 class CIArtifactPipeline:
@@ -63,6 +74,7 @@ class CIArtifactPipeline:
         self.fs = fs
         self.config = config or CIArtifactConfig()
         self._stage1 = CITemplateSubtraction(fs=fs, config=self.config.stage1)
+        self._stage3 = ICACancellation(fs=fs, config=self.config.stage3)
 
     def run(self, eeg: np.ndarray) -> np.ndarray:
         """Apply all enabled stages in sequence.
@@ -93,14 +105,18 @@ class CIArtifactPipeline:
         else:
             logger.debug("  Stage 2 (spatial filter): disabled — skipping.")
 
-        # ── Stage 3: Adaptive Filter ──────────────────────────────────────────
+        # ── Stage 3: ICA Cancellation ─────────────────────────────────────
         if self.config.stage3_enabled:
-            logger.warning(
-                "Stage 3 (adaptive filter) is enabled but not yet implemented. "
-                "See src/neuroaura/preprocessing/ci_artifact/adaptive_filter.py"
+            logger.info("  Stage 3 (ICA cancellation): running...")
+            eeg = self._stage3.fit_transform(eeg)
+            report = self._stage3.get_artifact_report()
+            logger.info(
+                "  Stage 3 done. Removed %d/%d ICA components.",
+                report.get("n_artifacts_removed", 0),
+                report.get("n_components_total", 0),
             )
         else:
-            logger.debug("  Stage 3 (adaptive filter): disabled — skipping.")
+            logger.debug("  Stage 3 (ICA cancellation): disabled — skipping.")
 
         logger.info("CI Artifact Pipeline: output shape %s", eeg.shape)
         return eeg

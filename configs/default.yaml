@@ -77,3 +77,27 @@ output:
   save_cleaned_eeg: true
   save_envelopes: true
   report_format: "html"       # html | pdf | none
+
+# ── Deep Learning Models ──────────────────────────────────────────────────────
+models:
+  # Adapter selection for GlobalCITrainer
+  adapter: "kul"              # kul | mesgarani
+  use_external: false         # true = use real cloned repo; false = fallback CNN/CRN
+  num_eeg_channels: 64
+  audio_sampling_rate: 64     # EEG sampling rate (envelope downsampled to this)
+
+  training:
+    epochs: 50
+    batch_size: 32
+    lr: 0.001
+    loss_mode: "classification"  # classification | reconstruction
+    device: "cpu"             # cpu | cuda | mps
+    output_dir: "./checkpoints"
+
+# ── CI Vocoder ────────────────────────────────────────────────────────────────
+ci_vocoder:
+  n_channels: 16              # Number of simulated CI electrode channels (8–22)
+  f_low: 200.0                # Hz — lower edge of CI tonotopy
+  f_high: 7000.0              # Hz — upper edge
+  carrier: "noise"            # noise | sine
+  ci_rate_pps: 900.0          # Simulated CI stimulation rate (pulses/second)

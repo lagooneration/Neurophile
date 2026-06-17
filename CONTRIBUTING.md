@@ -2,6 +2,15 @@
 
 Thank you for contributing to open-source auditory neuroscience tooling!
 
+> **This file covers general contribution standards.**
+>
+> For a full step-by-step guide to training the model from scratch, wiring
+> external academic models, and submitting new adapters, see:
+> → **[CONTRIBUTORS.md](CONTRIBUTORS.md)**
+>
+> For clinicians using the pre-trained Global CI Foundation Model, see:
+> → **[CLINICAL_GUIDE.md](CLINICAL_GUIDE.md)**
+
 ## Where to start
 
 Check the [GitHub Issues](https://github.com/neuroaura/neuroaura/issues) for items tagged:
@@ -9,8 +18,6 @@ Check the [GitHub Issues](https://github.com/neuroaura/neuroaura/issues) for ite
 - `scaffold` — placeholder modules that need implementing (see map below)
 - `ci-artifact` — cochlear implant artifact methods
 - `device-driver` — new EEG device support
-
----
 
 ## High-Priority Scaffold Modules
 
