@@ -36,7 +36,7 @@ class TestLinearDecoder:
         eeg, env = make_eeg_envelope()
         decoder = LinearDecoder(lag_min_ms=0, lag_max_ms=50)
         decoder.fit(eeg, env, FS)
-        r = decoder.score(eeg, env[int(50 * FS / 1000):])
+        r = decoder.score(eeg, env[decoder.n_lags - 1:])
         assert r > 0.0, f"Expected positive correlation, got {r}"
 
     def test_error_without_fit(self):

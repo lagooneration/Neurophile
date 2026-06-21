@@ -48,7 +48,7 @@ import logging
 from math import gcd
 
 import numpy as np
-from scipy.signal import butter, filtfilt, hilbert, resample_poly
+from scipy.signal import butter, hilbert, resample_poly
 
 logger = logging.getLogger(__name__)
 
@@ -251,16 +251,18 @@ class CIVocoderSimulator:
         if lo >= hi:
             return np.zeros_like(signal)
         try:
-            b, a = butter(_FILTER_ORDER, [lo, hi], btype="band")
-            return filtfilt(b, a, signal)
+            from scipy.signal import sosfiltfilt
+            sos = butter(_FILTER_ORDER, [lo, hi], btype="band", output="sos")
+            return sosfiltfilt(sos, signal)
         except Exception:
             return np.zeros_like(signal)
 
     def _lowpass(self, signal: np.ndarray, cutoff_hz: float = 8.0) -> np.ndarray:
+        from scipy.signal import sosfiltfilt
         nyq = self.fs / 2.0
         cutoff = min(cutoff_hz / nyq, 0.999)
-        b, a = butter(_FILTER_ORDER, cutoff, btype="low")
-        return filtfilt(b, a, signal)
+        sos = butter(_FILTER_ORDER, cutoff, btype="low", output="sos")
+        return sosfiltfilt(sos, signal)
 
     @staticmethod
     def _downsample(signal: np.ndarray, fs_in: int, fs_out: int) -> np.ndarray:

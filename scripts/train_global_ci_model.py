@@ -150,7 +150,26 @@ def step4_clean_eeg(
     enable_ica: bool,
     ci_rate_pps: float,
 ) -> list[np.ndarray]:
-    """Step 4: Clean EEG via CI artifact pipeline."""
+    """Step 4: Clean EEG via CI artifact pipeline.
+
+    NOTE: The CI artifact pipeline (template subtraction) requires a sample
+    rate of ≥200 Hz — ideally ≥1000 Hz — to meaningfully resolve pulse
+    artifacts at clinical CI rates (300–3500 pps). At 64 Hz (the synthetic
+    training rate), running Stage 1 on random noise detects spurious 'pulses'
+    and corrupts the signal, producing NaN loss. Stage 1 is therefore skipped
+    when fs < 200 Hz.
+    """
+    MIN_FS_FOR_CI_PIPELINE = 200  # Hz
+
+    if fs < MIN_FS_FOR_CI_PIPELINE:
+        logger.info(
+            "Step 4: EEG sample rate %d Hz < %d Hz — skipping CI artifact "
+            "pipeline (designed for ≥1000 Hz clinical EEG). "
+            "Pass real EEG at full resolution to enable artifact rejection.",
+            fs, MIN_FS_FOR_CI_PIPELINE,
+        )
+        return [trial.copy() for trial in eeg_trials]
+
     stage3_config = None
     if enable_ica:
         stage3_config = ICACancellationConfig(
@@ -213,6 +232,21 @@ def step5_6_train(
     ]).astype("float32")                                                          # (N, T, 1)
     # Synthetic labels: alternating attended/unattended for balanced training
     label_array = np.array([i % 2 for i in range(n_trials)], dtype="float32")
+
+    # ── NaN / Inf guard ───────────────────────────────────────────────────────
+    nan_eeg = ~np.isfinite(eeg_array)
+    nan_env = ~np.isfinite(env_array)
+    if nan_eeg.any() or nan_env.any():
+        n_bad_eeg = nan_eeg.sum()
+        n_bad_env = nan_env.sum()
+        logger.warning(
+            "NaN/Inf detected in arrays before training — zeroing %d EEG and %d envelope values. "
+            "This usually means the CI artifact pipeline ran on low-rate data. "
+            "Consider using --eeg-dir with full-rate (≥1000 Hz) EEG.",
+            n_bad_eeg, n_bad_env,
+        )
+        eeg_array = np.nan_to_num(eeg_array, nan=0.0, posinf=0.0, neginf=0.0)
+        env_array = np.nan_to_num(env_array, nan=0.0, posinf=0.0, neginf=0.0)
 
     # ── Train ─────────────────────────────────────────────────────────────────
     trainer = GlobalCITrainer(

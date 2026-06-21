@@ -80,22 +80,22 @@ def _build_fallback_mesgarani_crn(num_eeg_channels: int) -> "torch.nn.Module":
             # EEG encoder
             self.eeg_enc = nn.Sequential(
                 nn.Conv1d(n_ch, hidden, kernel_size=5, padding=2),
-                nn.LayerNorm(hidden),
+                nn.BatchNorm1d(hidden),
                 nn.GELU(),
                 nn.Conv1d(hidden, hidden, kernel_size=5, padding=4, dilation=2),
-                nn.LayerNorm(hidden),
+                nn.BatchNorm1d(hidden),
                 nn.GELU(),
                 nn.Conv1d(hidden, hidden, kernel_size=5, padding=8, dilation=4),
-                nn.LayerNorm(hidden),
+                nn.BatchNorm1d(hidden),
                 nn.GELU(),
             )
             # Envelope encoder
             self.env_enc = nn.Sequential(
                 nn.Conv1d(1, hidden // 2, kernel_size=5, padding=2),
-                nn.LayerNorm(hidden // 2),
+                nn.BatchNorm1d(hidden // 2),
                 nn.GELU(),
                 nn.Conv1d(hidden // 2, hidden // 2, kernel_size=5, padding=4, dilation=2),
-                nn.LayerNorm(hidden // 2),
+                nn.BatchNorm1d(hidden // 2),
                 nn.GELU(),
             )
             # Temporal fusion

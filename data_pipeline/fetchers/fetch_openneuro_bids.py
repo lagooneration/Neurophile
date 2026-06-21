@@ -111,12 +111,13 @@ def fetch_openneuro_dataset(
     dest.mkdir(parents=True, exist_ok=True)
 
     s3_src = meta["s3_path"]
+    aws_dest = dest
     if subject:
         s3_src = f"{s3_src}/{subject}"
-        dest = dest / subject
+        aws_dest = dest / subject
 
     if use_aws:
-        return _fetch_via_aws(s3_src, dest, dry_run)
+        return _fetch_via_aws(s3_src, aws_dest, dry_run)
     return _fetch_via_openneuro_py(dataset_id, dest, subject, dry_run)
 
 

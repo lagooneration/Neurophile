@@ -47,7 +47,7 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# NeuroAuRA-specific
+# NEUROPHILE-specific
 # -------------------
 # EEG data files (never commit raw data)
 data/
@@ -80,3 +80,13 @@ logs/
 
 # Others
 HELP.md
+TESTING.md
+recent_changes.txt
+
+# Context
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+SKILL.md
+PROJECT_CONTEXT.md
+PROMPTS.md

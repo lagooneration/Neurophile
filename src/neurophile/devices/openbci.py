@@ -86,6 +86,8 @@ class OpenBCIDevice(BaseDevice):
         Name of the LSL outlet. Downstream tools subscribe to this name.
     """
 
+    info = _BOARD_INFO["cyton"]
+
     def __init__(
         self,
         board: str = "cyton",
@@ -103,10 +105,7 @@ class OpenBCIDevice(BaseDevice):
         self._outlet = None
         self._streaming = False
         self._thread: threading.Thread | None = None
-
-    @property
-    def info(self) -> DeviceInfo:  # type: ignore[override]
-        return _BOARD_INFO[self._board_name]
+        self.info = _BOARD_INFO[self._board_name]
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 

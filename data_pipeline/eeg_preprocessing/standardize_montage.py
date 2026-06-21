@@ -40,7 +40,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # ── Neurophile canonical 64-ch channel names (10-20 standard) ─────────────────
-NEUROAURA_64CH = [
+NEUROPHILE_64CH = [
     "Fp1", "AF7", "AF3", "F1", "F3", "F5", "F7", "FT7",
     "FC5", "FC3", "FC1", "C1", "C3", "C5", "T7", "TP7",
     "CP5", "CP3", "CP1", "P1", "P3", "P5", "P7", "P9",
@@ -50,7 +50,7 @@ NEUROAURA_64CH = [
     "C2", "C4", "C6", "T8", "TP8", "CP6", "CP4", "CP2",
     "P2", "P4", "P6", "P8", "P10", "PO8", "PO4", "O2",
 ]
-assert len(NEUROAURA_64CH) == 64, "Canonical channel list must have exactly 64 entries"
+assert len(NEUROPHILE_64CH) == 64, "Canonical channel list must have exactly 64 entries"
 
 
 class MontageStandardizer:
@@ -82,7 +82,7 @@ class MontageStandardizer:
         montage_name: str = "standard_1020",
         handle_missing: str = "zero",
     ) -> None:
-        self.target_channels = target_channels or NEUROAURA_64CH
+        self.target_channels = target_channels or NEUROPHILE_64CH
         self.montage_name = montage_name
         self.handle_missing = handle_missing
 

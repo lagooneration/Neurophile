@@ -358,7 +358,8 @@ class GlobalCITrainer:
         self._strategy.model.eval()  # type: ignore[attr-defined]
         device = self._strategy.device  # type: ignore[attr-defined]
         correct, total = 0, 0
-        pearson_rs = []
+        all_probs: list[float] = []
+        all_labels: list[float] = []
 
         with torch.no_grad():
             for i in range(len(eeg_array)):
@@ -369,15 +370,23 @@ class GlobalCITrainer:
                 pred = 1 if prob > 0.5 else 0
                 correct += int(pred == label_array[i])
                 total += 1
+                all_probs.append(prob)
+                all_labels.append(float(label_array[i]))
 
-                # Pearson ρ between predicted probability and label
-                r = np.corrcoef([prob], [label_array[i]])[0, 1]
-                if not np.isnan(r):
-                    pearson_rs.append(r)
+        # Compute Pearson r over all predictions at once (needs ≥2 unique values)
+        mean_pearson_r = 0.0
+        if len(all_probs) >= 2:
+            probs_arr = np.array(all_probs)
+            labels_arr = np.array(all_labels)
+            # Only compute if there is variance in both arrays
+            if probs_arr.std() > 1e-9 and labels_arr.std() > 1e-9:
+                r = np.corrcoef(probs_arr, labels_arr)[0, 1]
+                if np.isfinite(r):
+                    mean_pearson_r = float(r)
 
         return {
             "accuracy": correct / max(total, 1),
-            "mean_pearson_r": float(np.mean(pearson_rs)) if pearson_rs else 0.0,
+            "mean_pearson_r": mean_pearson_r,
         }
 
     def _eval_sklearn(

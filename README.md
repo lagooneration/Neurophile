@@ -1,10 +1,10 @@
-# Neurophile
+# 𝝅europhile
 
-**Umbrella Platform for Neural Decoding & Federated Research**
+**Open Source Platform for Neural Decoding & Federated Research**
 
-*"Join the evolution of transforming clinical recovery journeys into collective scientific progress via privacy-preserving federated learning."*
+*"This repository contains an open-source software ecosystem for transforming clinical recovery journeys into collective scientific progress via privacy-preserving federated learning."*
 
-An open-source software ecosystem for neural decoding, real-time neuroplasticity tracking, and clinical rehabilitation. While our current foundational models focus heavily on auditory attention decoding and cochlear implant EEG, Neurophile is designed as an extensible umbrella platform bridging multiple research labs across diverse neurological domains.
+While our current foundational models focus heavily on auditory attention decoding and cochlear implant EEG, Neurophile is designed as an extensible platform for neural decoding across multiple neurological domains.
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)

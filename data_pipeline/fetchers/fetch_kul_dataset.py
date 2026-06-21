@@ -39,17 +39,11 @@ _ZENODO_BASE = "https://zenodo.org/record/1199011/files"
 
 _KUL_FILES: list[dict] = [
     {
-        "filename": "subject1.mat",
-        "url": f"{_ZENODO_BASE}/subject1.mat",
-        # NOTE: Replace this placeholder hash with the real SHA-256 from:
-        # https://zenodo.org/api/records/1199011
-        # Run: sha256sum subject1.mat  after downloading manually to verify.
-        "sha256": "PLACEHOLDER_SHA256_REPLACE_WITH_REAL_HASH",
-        "size_mb": 42.0,
-    },
-    # TODO: Add entries for subject2.mat … subject16.mat
-    # Pattern: {"filename": f"subject{i}.mat", "url": f"{_ZENODO_BASE}/subject{i}.mat",
-    #            "sha256": "...", "size_mb": ...}
+        "filename": "DATA_preproc.zip",
+        "url": f"{_ZENODO_BASE}/DATA_preproc.zip",
+        "sha256": "md5:1c1ca1390ad99ff41c33f36ca67f8418",
+        "size_mb": 1753.8,
+    }
 ]
 
 _DEFAULT_OUTPUT = Path("./data/raw/kul")
@@ -80,7 +74,8 @@ def fetch_kul_dataset(
     dry_run : bool
         If True, print URLs and sizes without downloading.
     subjects : list[int] or None
-        Subject IDs to download (1-indexed). None = all.
+        Note: The entire dataset is bundled in a single 1.7GB ZIP file on Zenodo.
+        This argument is currently ignored; the whole bundle is downloaded.
 
     Returns
     -------
@@ -93,17 +88,10 @@ def fetch_kul_dataset(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    files_to_fetch = _KUL_FILES
-    if subjects:
-        files_to_fetch = [
-            f for f in _KUL_FILES
-            if any(f["filename"] == f"subject{s}.mat" for s in subjects)
-        ]
-
     if dry_run:
-        total_mb = sum(f["size_mb"] for f in files_to_fetch)
-        logger.info("DRY RUN — %d files, ~%.1f MB total:", len(files_to_fetch), total_mb)
-        for f in files_to_fetch:
+        total_mb = sum(f["size_mb"] for f in _KUL_FILES)
+        logger.info("DRY RUN — 1 bundle, ~%.1f MB total:", total_mb)
+        for f in _KUL_FILES:
             logger.info("  %s  (%s)", f["url"], f["filename"])
         return []
 
@@ -111,22 +99,28 @@ def fetch_kul_dataset(
     registry = pooch.create(
         path=output_dir,
         base_url=_ZENODO_BASE + "/",
-        registry={f["filename"]: f["sha256"] for f in files_to_fetch},
+        registry={f["filename"]: f["sha256"] for f in _KUL_FILES},
     )
 
-    for file_meta in files_to_fetch:
+    for file_meta in _KUL_FILES:
         fname = file_meta["filename"]
-        logger.info("Fetching %s (~%.1f MB) …", fname, file_meta["size_mb"])
+        logger.info("Fetching %s (~%.1f MB). This might take a while...", fname, file_meta["size_mb"])
         try:
-            local_path = registry.fetch(fname)
-            downloaded.append(Path(local_path))
-            logger.info("  ✓ %s", local_path)
+            # Download and automatically extract the ZIP file
+            local_paths = registry.fetch(fname, processor=pooch.Unzip())
+            
+            if isinstance(local_paths, list):
+                downloaded.extend([Path(p) for p in local_paths])
+            else:
+                downloaded.append(Path(local_paths))
+                
+            logger.info("  ✓ Successfully downloaded and extracted %s", fname)
         except Exception as exc:
             logger.error("  ✗ Failed to download %s: %s", fname, exc)
 
     logger.info(
-        "KUL dataset: %d/%d files downloaded to %s",
-        len(downloaded), len(files_to_fetch), output_dir,
+        "KUL dataset: extracted %d files to %s",
+        len(downloaded), output_dir,
     )
     return downloaded
 

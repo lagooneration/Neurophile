@@ -48,7 +48,7 @@ def ci_contaminated_eeg(clean_eeg: np.ndarray) -> np.ndarray:
     rng = np.random.default_rng(1)
     # Add very strong impulse spikes at 900 pps to channel 0
     # High amplitude (×200) ensures kurtosis is super-Gaussian even after ICA mixing
-    rate_pps = 900
+    rate_pps = 100
     spike_interval = int(FS / rate_pps)
     spike_indices = np.arange(0, N_SAMPLES, spike_interval)
     eeg[spike_indices, 0] += rng.standard_normal(len(spike_indices)) * 200.0
