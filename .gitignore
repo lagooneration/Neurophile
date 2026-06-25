@@ -89,4 +89,5 @@ GEMINI.md
 AGENTS.md
 SKILL.md
 PROJECT_CONTEXT.md
-PROMPTS.md
+context_file_prompts.md
+.agents/

@@ -197,6 +197,7 @@ def step5_6_train(
     epochs: int,
     output_dir: Path,
     device: str,
+    test_split: float,
 ) -> None:
     """Steps 5–6: Feed data into adapter model and train."""
     if not _TORCH_AVAILABLE:
@@ -248,6 +249,23 @@ def step5_6_train(
         eeg_array = np.nan_to_num(eeg_array, nan=0.0, posinf=0.0, neginf=0.0)
         env_array = np.nan_to_num(env_array, nan=0.0, posinf=0.0, neginf=0.0)
 
+    # ── Split data ────────────────────────────────────────────────────────────
+    split_idx = int(n_trials * (1 - test_split))
+    if split_idx == 0 and n_trials > 0:
+        split_idx = 1 # ensure at least 1 training trial if available
+    elif split_idx == n_trials and n_trials > 1:
+        split_idx = n_trials - 1 # ensure at least 1 test trial if possible
+
+    train_eeg = eeg_array[:split_idx]
+    train_env = env_array[:split_idx]
+    train_label = label_array[:split_idx]
+    
+    test_eeg = eeg_array[split_idx:]
+    test_env = env_array[split_idx:]
+    test_label = label_array[split_idx:]
+
+    logger.info("Step 5: Train trials = %d, Test trials = %d", len(train_eeg), len(test_eeg))
+
     # ── Train ─────────────────────────────────────────────────────────────────
     trainer = GlobalCITrainer(
         model=model,
@@ -260,7 +278,7 @@ def step5_6_train(
 
     logger.info("Step 6: training global CI model …")
     t0 = time.time()
-    history = trainer.train(eeg_array, env_array, label_array)
+    history = trainer.train(train_eeg, train_env, train_label)
     elapsed = time.time() - t0
 
     logger.info(
@@ -269,8 +287,14 @@ def step5_6_train(
     )
 
     # ── Evaluate on training data (smoke test) ────────────────────────────────
-    metrics = trainer.evaluate(eeg_array, env_array, label_array)
-    logger.info("Train-set metrics: %s", metrics)
+    if len(train_eeg) > 0:
+        train_metrics = trainer.evaluate(train_eeg, train_env, train_label)
+        logger.info("Train-set metrics: %s", train_metrics)
+        
+    # ── Evaluate on testing data ──────────────────────────────────────────────
+    if len(test_eeg) > 0:
+        test_metrics = trainer.evaluate(test_eeg, test_env, test_label)
+        logger.info("Test-set metrics:  %s", test_metrics)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -316,6 +340,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--enable-ica", action="store_true",
         help="Enable ICA-based CI artifact cancellation (Stage 3).",
+    )
+    parser.add_argument(
+        "--test-split", type=float, default=0.2,
+        help="Proportion of trials to hold out for testing (default: 0.2).",
     )
     parser.add_argument(
         "--device", default="cpu",
@@ -378,6 +406,7 @@ def main() -> None:
         epochs=args.epochs,
         output_dir=args.output_dir,
         device=args.device,
+        test_split=args.test_split,
     )
 
     logger.info("Done. Checkpoint saved in %s", args.output_dir)
